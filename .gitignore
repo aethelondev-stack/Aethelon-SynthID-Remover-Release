@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+env/
+ENV/
+
+# Large Model Weights (Downloaded via UI)
+models/*
+!models/.gitkeep
+
+# Output generated files
+output/*
+!output/.gitkeep
+
+# OS generated
+.DS_Store
+Thumbs.db
+*.tmp
