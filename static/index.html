@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aethelon SynthID & AI Watermark Remover</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        },
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+        .gradient-border {
+            background: linear-gradient(60deg, #3b82f6, #10b981, #6366f1);
+        }
+    </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <i class="ri-shield-flash-line text-2xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+                        Aethelon SynthID Remover
+                        <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">v1.0 Release</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Google SynthID, Görünür Filigran & C2PA Temizleyici</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="openModelModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium border border-slate-700 transition">
+                    <i class="ri-cpu-line text-emerald-400"></i>
+                    <span id="model-status-badge">Modelleri Yönet</span>
+                </button>
+                <a href="https://github.com/aethelondev-stack/Aethelon-SynthID-Remover-Release" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium border border-slate-700 transition text-slate-300">
+                    <i class="ri-github-fill text-base"></i>
+                    <span>GitHub</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left: Upload & Preview (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col space-y-4">
+            
+            <!-- Upload Box -->
+            <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-2xl p-6 bg-slate-900/50 transition cursor-pointer flex flex-col items-center justify-center text-center group min-h-[220px]">
+                <input type="file" id="fileInput" accept="image/*" class="hidden">
+                <div class="w-14 h-14 rounded-2xl bg-slate-800 group-hover:bg-emerald-500/10 flex items-center justify-center mb-3 transition group-hover:scale-110">
+                    <i class="ri-upload-cloud-2-line text-2xl text-slate-400 group-hover:text-emerald-400"></i>
+                </div>
+                <h3 class="font-semibold text-slate-200 mb-1 text-sm">Görseli Buraya Sürükleyin veya Tıklayın</h3>
+                <p class="text-xs text-slate-500 max-w-xs">PNG, JPG, JPEG veya WEBP formatındaki yapay zeka tarafından düzenlenmiş veya oluşturulmuş fotoğraflar</p>
+            </div>
+
+            <!-- Preview Cards (Tabs: Öncesi / Sonrası) -->
+            <div id="previewContainer" class="hidden flex-1 flex flex-col bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+                    <div class="flex items-center space-x-2">
+                        <button id="tabBefore" onclick="switchTab('before')" class="px-3 py-1 rounded-lg text-xs font-medium bg-slate-800 text-emerald-400 border border-slate-700">Orijinal</button>
+                        <button id="tabAfter" onclick="switchTab('after')" class="px-3 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200">Temizlenmiş Çıktı</button>
+                    </div>
+                    <div id="fileInfo" class="text-xs text-slate-400 font-mono"></div>
+                </div>
+
+                <div class="relative flex-1 min-h-[350px] p-4 flex items-center justify-center bg-black/40">
+                    <img id="imgBefore" class="max-h-[500px] w-auto object-contain rounded-lg shadow" src="" alt="Orijinal">
+                    <img id="imgAfter" class="hidden max-h-[500px] w-auto object-contain rounded-lg shadow" src="" alt="Temizlenmiş">
+                    
+                    <div id="processingOverlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
+                        <div class="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-xs text-emerald-400 font-medium tracking-wide animate-pulse" id="processingStatusText">SynthID izleri temizleniyor...</p>
+                    </div>
+                </div>
+
+                <!-- Bottom Download Action -->
+                <div id="downloadBar" class="hidden px-4 py-3 border-t border-slate-800 bg-slate-900/80 flex items-center justify-between">
+                    <span class="text-xs text-emerald-400 flex items-center gap-1">
+                        <i class="ri-checkbox-circle-fill"></i> Temizlik Başarılı!
+                    </span>
+                    <a id="btnDownload" href="#" download="temizlenmis_foto.jpg" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 transition">
+                        <i class="ri-download-2-line"></i> Temiz Görseli İndir
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right: Control Panel (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col space-y-4">
+            
+            <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5">
+                
+                <!-- Section 1: Method Selector -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">1. SynthID Temizleme Yöntemi</label>
+                    
+                    <div class="space-y-2">
+                        <!-- Option 1: VAE Latent -->
+                        <label class="flex items-start p-3 rounded-xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800/70 cursor-pointer transition relative">
+                            <input type="radio" name="cleanMethod" value="vae" checked class="mt-1 text-emerald-500 focus:ring-0">
+                            <div class="ml-3 flex-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-slate-200">Stability AI SD-VAE Latent</span>
+                                    <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium">Önerilen</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-0.5">8x Latent pertürbasyonu. En yüksek netlik ve yüz/doku koruması (29+ dB PSNR).</p>
+                                
+                                <div id="vaeSettings" class="mt-3 pt-2 border-t border-slate-700/60">
+                                    <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                                        <span>Gürültü Şiddeti (Sigma):</span>
+                                        <span id="sigmaVal" class="font-bold text-emerald-400">0.15 (Hafif/Net)</span>
+                                    </div>
+                                    <input type="range" id="sigmaSlider" min="0.10" max="0.30" step="0.05" value="0.15" class="w-full accent-emerald-500 cursor-pointer">
+                                </div>
+                            </div>
+                        </label>
+
+                        <!-- Option 2: Fourier Math -->
+                        <label class="flex items-start p-3 rounded-xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800/70 cursor-pointer transition">
+                            <input type="radio" name="cleanMethod" value="fourier" class="mt-1 text-emerald-500 focus:ring-0">
+                            <div class="ml-3 flex-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-slate-200">Fourier Faz Bozucu (2D FFT)</span>
+                                    <span class="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-medium">0 MB / Hızlı</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-0.5">16-32 px frekans halkasını rastgele faza dağıtır. Model indirmesi gerektirmez.</p>
+                            </div>
+                        </label>
+
+                        <!-- Option 3: Hybrid Filter -->
+                        <label class="flex items-start p-3 rounded-xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800/70 cursor-pointer transition">
+                            <input type="radio" name="cleanMethod" value="hybrid" class="mt-1 text-emerald-500 focus:ring-0">
+                            <div class="ml-3 flex-1">
+                                <span class="text-xs font-bold text-slate-200">Bilateral + Kamera Sensör Greni</span>
+                                <p class="text-[11px] text-slate-400 mt-0.5">Kenar korumalı filtreleme ve mikronluk ISO gürültüsü ile frekans desenini maskeleme.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Section 2: Visible Watermark Removal -->
+                <div class="pt-3 border-t border-slate-800">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">2. Görünür Filigran Ayarları</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="chkSparkle" checked class="rounded text-emerald-500 focus:ring-0 bg-slate-800 border-slate-700">
+                            <span>Google Gemini Yıldızını (✦) Otomatik Yok Et</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Section 3: EXIF Camera Profile -->
+                <div class="pt-3 border-t border-slate-800">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">3. Kimlik Aklama (Kamera EXIF)</label>
+                    <select id="cameraPreset" class="w-full bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <option value="iphone12pro">Apple iPhone 12 Pro (iOS 17.5.1)</option>
+                        <option value="iphone15pro">Apple iPhone 15 Pro Max (iOS 17.5.1)</option>
+                        <option value="samsungs24">Samsung Galaxy S24 Ultra (One UI 6.1)</option>
+                        <option value="sonya7iv">Sony Alpha 7 IV (Dijital Fotoğraf Makinesi)</option>
+                    </select>
+                    <p class="text-[10px] text-slate-500 mt-1">C2PA ve yapay zeka metaverileri silinip yerine seçilen cihazın gerçek kamera imzası eklenir.</p>
+                </div>
+
+                <!-- Big Clean Button -->
+                <button id="btnClean" onclick="startCleaning()" disabled class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-lg shadow-emerald-600/20 transition flex items-center justify-center space-x-2">
+                    <i class="ri-magic-line text-lg"></i>
+                    <span>TÜM İZLERİ TEMİZLE</span>
+                </button>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Model Management Modal -->
+    <div id="modelModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <i class="ri-cpu-line text-emerald-400"></i> Model & Eklenti Yöneticisi
+                </h3>
+                <button onclick="closeModelModal()" class="text-slate-400 hover:text-white">
+                    <i class="ri-close-line text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3" id="modelList">
+                <!-- Dynamically populated by JS -->
+            </div>
+
+            <div id="downloadProgressBarContainer" class="hidden pt-2 border-t border-slate-800 space-y-2">
+                <div class="flex justify-between text-xs">
+                    <span id="downloadStatusText" class="text-slate-400">İndiriliyor...</span>
+                    <span id="downloadPctText" class="text-emerald-400 font-bold">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div id="downloadProgressBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <div class="pt-2 text-right">
+                <button onclick="closeModelModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        let currentFile = null;
+        let cleanedResultBlob = null;
+
+        // UI Elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const imgBefore = document.getElementById('imgBefore');
+        const imgAfter = document.getElementById('imgAfter');
+        const fileInfo = document.getElementById('fileInfo');
+        const btnClean = document.getElementById('btnClean');
+        const processingOverlay = document.getElementById('processingOverlay');
+        const downloadBar = document.getElementById('downloadBar');
+        const btnDownload = document.getElementById('btnDownload');
+        const sigmaSlider = document.getElementById('sigmaSlider');
+        const sigmaVal = document.getElementById('sigmaVal');
+
+        sigmaSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            let desc = " (Orta)";
+            if (val <= 0.15) desc = " (Hafif / En Yüksek Netlik)";
+            else if (val >= 0.25) desc = " (Maksimum Bozucu)";
+            sigmaVal.innerText = val.toFixed(2) + desc;
+        });
+
+        // Dropzone events
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-emerald-500'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-emerald-500'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-emerald-500');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) return alert('Lütfen geçerli bir görsel dosyası seçin.');
+            currentFile = file;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imgBefore.src = e.target.result;
+                previewContainer.classList.remove('hidden');
+                switchTab('before');
+                downloadBar.classList.add('hidden');
+                btnClean.disabled = false;
+                
+                const img = new Image();
+                img.onload = () => {
+                    fileInfo.innerText = `${img.width}x${img.height} px | ${(file.size / 1024).toFixed(1)} KB`;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function switchTab(tab) {
+            const btnBefore = document.getElementById('tabBefore');
+            const btnAfter = document.getElementById('tabAfter');
+
+            if (tab === 'before') {
+                imgBefore.classList.remove('hidden');
+                imgAfter.classList.add('hidden');
+                btnBefore.className = 'px-3 py-1 rounded-lg text-xs font-medium bg-slate-800 text-emerald-400 border border-slate-700';
+                btnAfter.className = 'px-3 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200';
+            } else {
+                imgBefore.classList.add('hidden');
+                imgAfter.classList.remove('hidden');
+                btnAfter.className = 'px-3 py-1 rounded-lg text-xs font-medium bg-slate-800 text-emerald-400 border border-slate-700';
+                btnBefore.className = 'px-3 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200';
+            }
+        }
+
+        async function startCleaning() {
+            if (!currentFile) return;
+
+            const method = document.querySelector('input[name="cleanMethod"]:checked').value;
+            const sigma = parseFloat(sigmaSlider.value);
+            const removeSparkle = document.getElementById('chkSparkle').checked;
+            const preset = document.getElementById('cameraPreset').value;
+
+            processingOverlay.classList.remove('hidden');
+            btnClean.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            formData.append('method', method);
+            formData.append('noise_std', sigma);
+            formData.append('remove_sparkle', removeSparkle);
+            formData.append('exif_preset', preset);
+
+            try {
+                const res = await fetch('/api/clean', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'İşlem başarısız oldu.');
+                }
+
+                const blob = await res.blob();
+                const cleanUrl = URL.createObjectURL(blob);
+                imgAfter.src = cleanUrl;
+                btnDownload.href = cleanUrl;
+                downloadBar.classList.remove('hidden');
+                switchTab('after');
+            } catch (err) {
+                alert('Hata: ' + err.message);
+            } finally {
+                processingOverlay.classList.add('hidden');
+                btnClean.disabled = false;
+            }
+        }
+
+        // Model Management Modal Functions
+        function openModelModal() {
+            document.getElementById('modelModal').classList.remove('hidden');
+            fetchModels();
+        }
+
+        function closeModelModal() {
+            document.getElementById('modelModal').classList.add('hidden');
+        }
+
+        async function fetchModels() {
+            try {
+                const res = await fetch('/api/models/status');
+                const data = await res.json();
+                renderModels(data.models, data.download_state);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderModels(models, downloadState) {
+            const list = document.getElementById('modelList');
+            list.innerHTML = '';
+
+            models.forEach(m => {
+                const card = document.createElement('div');
+                card.className = 'p-3 rounded-xl border border-slate-800 bg-slate-800/50 flex items-center justify-between';
+                
+                let actionBtn = '';
+                if (m.ready) {
+                    actionBtn = '<span class="text-xs text-emerald-400 font-semibold flex items-center gap-1"><i class="ri-checkbox-circle-fill"></i> Hazır</span>';
+                } else if (downloadState.is_downloading && downloadState.model_id === m.id) {
+                    actionBtn = '<span class="text-xs text-amber-400 font-semibold animate-pulse flex items-center gap-1"><i class="ri-loader-4-line animate-spin"></i> İndiriliyor</span>';
+                } else {
+                    actionBtn = `<button onclick="downloadModel('${m.id}')" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-medium text-white flex items-center gap-1 shadow"><i class="ri-download-cloud-line"></i> İndir (~${m.size_mb} MB)</button>`;
+                }
+
+                card.innerHTML = `
+                    <div class="pr-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-200">${m.name}</span>
+                            ${m.size_mb === 0 ? '<span class="text-[9px] bg-slate-700 text-slate-300 px-1 py-0.5 rounded">0 MB</span>' : ''}
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">${m.description_tr}</p>
+                    </div>
+                    <div class="pl-2 flex-shrink-0">${actionBtn}</div>
+                `;
+                list.appendChild(card);
+            });
+
+            // Handle progress bar
+            const progCont = document.getElementById('downloadProgressBarContainer');
+            if (downloadState.is_downloading) {
+                progCont.classList.remove('hidden');
+                document.getElementById('downloadStatusText').innerText = downloadState.status_message;
+                document.getElementById('downloadPctText').innerText = downloadState.progress_pct + '%';
+                document.getElementById('downloadProgressBar').style.width = downloadState.progress_pct + '%';
+                setTimeout(fetchModels, 2000);
+            } else {
+                progCont.classList.add('hidden');
+            }
+        }
+
+        async function downloadModel(modelId) {
+            try {
+                await fetch('/api/models/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_id: modelId })
+                });
+                fetchModels();
+            } catch (e) {
+                alert('İndirme başlatılamadı: ' + e);
+            }
+        }
+
+        // Init
+        fetchModels();
+    </script>
+</body>
+</html>
