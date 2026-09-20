@@ -32,6 +32,8 @@ class SynthIDCleaner:
         dtype = torch.float16 if device == "cuda" else torch.float32
 
         self._vae = AutoencoderKL.from_pretrained(model_id, torch_dtype=dtype).to(device)
+        self._vae.enable_tiling()
+        self._vae.enable_slicing()
         self._vae.eval()
         return self._vae
 
